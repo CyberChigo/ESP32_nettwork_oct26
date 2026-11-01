@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <WebServer.h>
 #include "web_server.h"
+#include "serial_input.h"
 
 static WebServer server(80);
 
@@ -116,6 +117,8 @@ void handleRoot_2() {
     );
 }
 
+
+
 // Håndterer forespørsler til /HRV
 void handleRoot_3() {
     Serial.println("Foresporsel mottatt for /HRV");
@@ -144,33 +147,81 @@ void handleRoot_3() {
     );
 }
 
+
+
 // Håndterer forespørsler til /Playground
 void handleRoot_4() {
-    Serial.println("Foresporsel mottatt for /Plaground");
+    server.send(200, "text/html; charset=utf-8", R"HTML(
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Playground</title>
+</head>
 
-    server.send(
-        200,
-        "text/html; charset=utf-8",
-            R"HTML(
-            <!DOCTYPE html>
-            <html lang="no">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1">
-            <title>Testground</title>
-        </head>
+<body>
+    <h1>Playground</h1>
+    <p>Siste mottatte testverdi:</p>
 
-        <body>
-            <h1>Testground</h1>
-            <p>Her skal vi vise testverdier fra seriellmonitoren.</p>
-            <a href="/">Tilbake til hovedsiden</a>
-        </body>
-        
-        </html>
-        )HTML"
-    );
+    <h2 id="testverdi">—</h2>
+    <p id="status">Henter data …</p>
+
+    <a href="/">Tilbake til hovedsiden</a>
+
+    <script>
+        async function oppdaterVerdi() {
+            const tallfelt = document.getElementById("testverdi");
+            const statusfelt = document.getElementById("status");
+
+            try {
+                const svar = await fetch("/api/testverdi", {
+                    cache: "no-store"
+                });
+
+                if (!svar.ok) {
+                    throw new Error("Serveren svarte med feil");
+                }
+
+                const data = await svar.json();
+
+                if (data.verdi === null) {
+                    tallfelt.textContent = "—";
+                    statusfelt.textContent = "Send et tall fra seriellmonitoren.";
+                }
+                else {
+                    tallfelt.textContent = data.verdi;
+                    statusfelt.textContent = "Kontakt med ESP32.";
+                }
+            }
+            catch (feil) {
+                statusfelt.textContent =
+                    "Kan ikke hente data. Eventuell vist verdi er fra sist.";
+            }
+
+            setTimeout(oppdaterVerdi, 500);
+        }
+
+        oppdaterVerdi();
+    </script>
+</body>
+</html>
+)HTML");
 }
 
+void handleTestverdi() {
+    String svar;
+
+    if (harTestverdi()) {
+        svar = String("{\"verdi\":") + getTestverdi() + "}";
+    }
+    else {
+        svar = "{\"verdi\":null}";
+    }
+
+    server.sendHeader("Cache-Control", "no-store");
+    server.send(200, "application/json", svar);
+}
 
 
 
@@ -191,6 +242,8 @@ void startWebServer() {
     server.on("/Plaground", HTTP_GET, handleRoot_4);
     server.on("/PLAYGROUND", HTTP_GET, handleRoot_4);
     server.on("/playground", HTTP_GET, handleRoot_4);
+
+    server.on("/api/testverdi", HTTP_GET, handleTestverdi); //For å printe til playground
 
     // Svar når ingen registrert rute passer
     server.onNotFound([]() {

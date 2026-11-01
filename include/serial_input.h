@@ -2,3 +2,5 @@
 #pragma once
 
 void handleSerialInput();
+int getTestverdi();
+bool harTestverdi();
