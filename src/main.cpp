@@ -21,6 +21,7 @@ void setup() {
 
 
 void loop() {
-    handleWebClient();
+    handleSerialInput(); //Sender dataen som kommmer inn fra seriell
+    handleWebClient(); //Stuker m webserveren. Black magic
     delay(2);
 }

@@ -150,6 +150,9 @@ void handleRoot_3() {
 
 
 // Håndterer forespørsler til /Playground
+// Inkluderer alle visuelle inpus, HTML blir fooort stor.
+
+
 void handleRoot_4() {
     server.send(200, "text/html; charset=utf-8", R"HTML(
 <!DOCTYPE html>
@@ -158,51 +161,157 @@ void handleRoot_4() {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Playground</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: auto;
+            padding: 20px;
+            background: #e8e9eb;
+        }
+
+        canvas {
+            width: 100%;
+            height: auto;
+            background: white;
+            border: 1px solid #aaa;
+        }
+    </style>
 </head>
 
 <body>
     <h1>Playground</h1>
-    <p>Siste mottatte testverdi:</p>
+    <p>Siste testverdi: <strong id="siste">—</strong></p>
+    <p id="status">Henter historikk …</p>
 
-    <h2 id="testverdi">—</h2>
-    <p id="status">Henter data …</p>
+    <canvas id="graf" width="900" height="400"
+            aria-label="Graf over sendte testverdier">
+        Nettleseren støtter ikke Canvas.
+    </canvas>
 
+    <p>X-akse: målenummer. Y-akse: testverdi.</p>
     <a href="/">Tilbake til hovedsiden</a>
 
     <script>
-        async function oppdaterVerdi() {
-            const tallfelt = document.getElementById("testverdi");
-            const statusfelt = document.getElementById("status");
+        const canvas = document.getElementById("graf");
+        const ctx = canvas.getContext("2d");
+        const statusfelt = document.getElementById("status");
+        const sistefelt = document.getElementById("siste");
 
+        function tegnGraf(data) {
+            const verdier = data.verdier;
+
+            const venstre = 70;
+            const topp = 25;
+            const bredde = canvas.width - venstre - 30;
+            const hoyde = canvas.height - topp - 55;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.font = "14px Arial";
+
+            if (verdier.length === 0) {
+                ctx.fillStyle = "#333";
+                ctx.fillText("Send et tall fra seriellmonitoren.", 70, 80);
+                sistefelt.textContent = "—";
+                return;
+            }
+
+            sistefelt.textContent = verdier[verdier.length - 1];
+
+            // Y-aksen starter på null og tilpasses høyeste verdi.
+            const maks = Math.max(10, ...verdier) * 1.1;
+
+            // Tegn rutenett og tall på Y-aksen.
+            for (let i = 0; i <= 5; i++) {
+                const y = topp + hoyde - (i / 5) * hoyde;
+                const verdi = (i / 5) * maks;
+
+                ctx.strokeStyle = "#ddd";
+                ctx.beginPath();
+                ctx.moveTo(venstre, y);
+                ctx.lineTo(venstre + bredde, y);
+                ctx.stroke();
+
+                ctx.fillStyle = "#333";
+                ctx.textAlign = "right";
+                ctx.fillText(verdi.toFixed(0), venstre - 10, y + 5);
+            }
+
+            // Gjør måleverdier om til posisjoner på tegneflaten.
+            const punkter = verdier.map((verdi, i) => ({
+                x: venstre + i / Math.max(1, verdier.length - 1) * bredde,
+                y: topp + hoyde - verdi / maks * hoyde
+            }));
+
+            // Tegn linjen mellom punktene.
+            ctx.strokeStyle = "#1456b8";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            punkter.forEach((punkt, i) => {
+                if (i === 0) {
+                    ctx.moveTo(punkt.x, punkt.y);
+                } else {
+                    ctx.lineTo(punkt.x, punkt.y);
+                }
+            });
+
+            ctx.stroke();
+
+            // Tegn punktene, også når vi bare har én verdi.
+            ctx.fillStyle = "#1456b8";
+
+            punkter.forEach(punkt => {
+                ctx.beginPath();
+                ctx.arc(punkt.x, punkt.y, 3, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Vis første og siste målenummer.
+            ctx.fillStyle = "#333";
+            ctx.textAlign = "left";
+            ctx.fillText(
+                String(data.forsteNummer),
+                venstre,
+                topp + hoyde + 25
+            );
+
+            if (verdier.length > 1) {
+                ctx.textAlign = "right";
+                ctx.fillText(
+                    String(data.forsteNummer + verdier.length - 1),
+                    venstre + bredde,
+                    topp + hoyde + 25
+                );
+            }
+        }
+
+        async function oppdaterGraf() {
             try {
-                const svar = await fetch("/api/testverdi", {
+                const svar = await fetch("/api/historikk", {
                     cache: "no-store"
                 });
 
                 if (!svar.ok) {
-                    throw new Error("Serveren svarte med feil");
+                    throw new Error("Kunne ikke hente historikk");
                 }
 
                 const data = await svar.json();
 
-                if (data.verdi === null) {
-                    tallfelt.textContent = "—";
-                    statusfelt.textContent = "Send et tall fra seriellmonitoren.";
-                }
-                else {
-                    tallfelt.textContent = data.verdi;
-                    statusfelt.textContent = "Kontakt med ESP32.";
-                }
+                tegnGraf(data);
+                statusfelt.textContent =
+                    data.verdier.length + " av 100 bufferplasser i bruk.";
             }
             catch (feil) {
                 statusfelt.textContent =
-                    "Kan ikke hente data. Eventuell vist verdi er fra sist.";
+                    "Ingen kontakt. Grafen viser sist hentede historikk.";
             }
 
-            setTimeout(oppdaterVerdi, 500);
+            setTimeout(oppdaterGraf, 500);
         }
 
-        oppdaterVerdi();
+        oppdaterGraf();
     </script>
 </body>
 </html>
@@ -225,6 +334,20 @@ void handleTestverdi() {
 
 
 
+
+//
+
+void handleHistorikk() {
+    server.sendHeader("Cache-Control", "no-store");
+
+    server.send(
+        200,
+        "application/json",
+        getHistorikkJson()
+    );
+}
+
+
 //Starer Serveren og fikser URLfor subseksjonene
 
 void startWebServer() {
@@ -244,6 +367,7 @@ void startWebServer() {
     server.on("/playground", HTTP_GET, handleRoot_4);
 
     server.on("/api/testverdi", HTTP_GET, handleTestverdi); //For å printe til playground
+    server.on("/api/historikk", HTTP_GET, handleHistorikk); //For å printe historikk i graf playground
 
     // Svar når ingen registrert rute passer
     server.onNotFound([]() {
