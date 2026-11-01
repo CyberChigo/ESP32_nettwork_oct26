@@ -45,6 +45,16 @@ void handleRoot_1() {
             border-radius: 10px;
         }
 
+        .Playground_knapp {
+            display: inline-block;
+            padding: 16px 32px;
+            margin: 10px;
+            background-color: #0e244a;
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+        }
+
         .knapp:hover {
             background-color: #555354;
         }
@@ -55,6 +65,7 @@ void handleRoot_1() {
     </style>
 </head>
 
+<!-- HOVEDSIDE --> 
 
 <body>
     <h1>Velkommen til EKG-Life support system </h1>
@@ -67,6 +78,10 @@ void handleRoot_1() {
 
 <!-- Linker til HRV-siden -->
     <a class="HRV_knapp" href="/hrv">HRV</a>
+
+<!-- Linker til Playground-siden -->
+    <a class="Playground_knapp" href="/playground">Playground</a>
+
 </body>
 </html>
 )HTML");
@@ -80,8 +95,24 @@ void handleRoot_2() {
 
     server.send(
         200,
-        "text/html",
-        "<h1>ESP32 fungerer for Pulssiden! </h1>"
+        "text/html; charset=utf-8", //Lar æ - bruke norske bokstaver
+            R"HTML( 
+            <!DOCTYPE html>
+            <html lang="no">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>PULS</title>
+        </head>
+
+        <body>
+            <h1>PULS</h1>
+            <p>PULS siden fungerer! :D </p>
+            <a href="/">Tilbake til hovedsiden</a>
+        </body>
+        
+        </html>
+        )HTML"
     );
 }
 
@@ -91,13 +122,59 @@ void handleRoot_3() {
 
     server.send(
         200,
-        "text/html",
-        "<h1>ESP32 fungerer for HRV-siden!</h1>"
+        "text/html; charset=utf-8", //Lar æ - bruke norske bokstaver
+            R"HTML( 
+            <!DOCTYPE html>
+            <html lang="no">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>HRV</title>
+        </head>
+
+        <body>
+            <h1>HRV</h1>
+            <p>HRV siden fungerer! :D </p>
+            <a href="/">Tilbake til hovedsiden</a>
+        </body>
+        
+        </html>
+        )HTML"
+        
     );
 }
 
-//Starer Serveren og fikser URLfor subseksjonene
+// Håndterer forespørsler til /Playground
+void handleRoot_4() {
+    Serial.println("Foresporsel mottatt for /Plaground");
 
+    server.send(
+        200,
+        "text/html; charset=utf-8",
+            R"HTML(
+            <!DOCTYPE html>
+            <html lang="no">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Testground</title>
+        </head>
+
+        <body>
+            <h1>Testground</h1>
+            <p>Her skal vi vise testverdier fra seriellmonitoren.</p>
+            <a href="/">Tilbake til hovedsiden</a>
+        </body>
+        
+        </html>
+        )HTML"
+    );
+}
+
+
+
+
+//Starer Serveren og fikser URLfor subseksjonene
 
 void startWebServer() {
     // Registrer alle URL-rutene
@@ -110,6 +187,10 @@ void startWebServer() {
     server.on("/HRV", HTTP_GET, handleRoot_3);
     server.on("/hrv", HTTP_GET, handleRoot_3);
     server.on("/Hrv", HTTP_GET, handleRoot_3);
+
+    server.on("/Plaground", HTTP_GET, handleRoot_4);
+    server.on("/PLAYGROUND", HTTP_GET, handleRoot_4);
+    server.on("/playground", HTTP_GET, handleRoot_4);
 
     // Svar når ingen registrert rute passer
     server.onNotFound([]() {
