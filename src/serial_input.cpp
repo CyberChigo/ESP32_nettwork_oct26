@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "serial_input.h"
-
+//Overordnet intensjon til 
 static int sisteTestverdi = 0;
 static bool verdiMottatt = false;
 

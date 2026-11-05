@@ -8,8 +8,8 @@ bool startWiFi(){
     WiFi.mode(WIFI_AP);
 
     bool nettverkStartet = WiFi.softAP( //Oppretter ESPens egen nettverk m navn og passord
-        "ESP32_AP_EKG",
-        "Password123"
+        "ESP32_AP_EKG_2",
+        "Password1234"
     );
 
     if (nettverkStartet){

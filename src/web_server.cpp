@@ -6,7 +6,7 @@
 static WebServer server(80);
 
 
-// Håndterer forespørsler til Hovedsiden samt byggere basic HTML kode for videre sending :D
+// Håndterer forespørsler til Hovedsiden samt bygger basic HTML kode for videre sending :D
 void handleRoot_1() {
     Serial.println("Foresporsel mottatt for /");
 
@@ -318,6 +318,37 @@ void handleRoot_4() {
 )HTML");
 }
 
+
+
+
+void handleRoot_5() {
+    Serial.println("Foresporsel mottatt for /EKG");
+
+    server.send(
+        200,
+        "text/html; charset=utf-8", //Lar nettsiden benytte seg av norske bokstaver
+            R"HTML( 
+            <!DOCTYPE html>
+            <html lang="no">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>EKG monitor</title>
+        </head>
+
+        <body>
+            <h1>EKG</h1>
+            <p>EKG siden fungerer! :D </p>
+            <a href="/">Tilbake til hovedsiden</a>
+        </body>
+        
+        </html>
+        )HTML"
+        
+    );
+}
+
+
 void handleTestverdi() {
     String svar;
 
@@ -331,6 +362,12 @@ void handleTestverdi() {
     server.sendHeader("Cache-Control", "no-store");
     server.send(200, "application/json", svar);
 }
+
+
+
+
+
+
 
 
 
@@ -365,6 +402,10 @@ void startWebServer() {
     server.on("/Plaground", HTTP_GET, handleRoot_4);
     server.on("/PLAYGROUND", HTTP_GET, handleRoot_4);
     server.on("/playground", HTTP_GET, handleRoot_4);
+
+    server.on("/EKG", HTTP_GET, handleRoot_5);
+    server.on("/ekg", HTTP_GET, handleRoot_5);
+    server.on("/Ekg", HTTP_GET, handleRoot_5);
 
     server.on("/api/testverdi", HTTP_GET, handleTestverdi); //For å printe til playground
     server.on("/api/historikk", HTTP_GET, handleHistorikk); //For å printe historikk i graf playground
